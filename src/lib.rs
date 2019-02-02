@@ -1,28 +1,36 @@
+// use fail::fail_point;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::sync::Mutex;
-// use fail::fail_point;
+use tempdir::TempDir;
 
 pub struct Account {
     name: String,
+    data_dir: TempDir,
 }
 
 impl Account {
     pub fn new(name: impl Into<String>, remaining: u64) -> Account {
-        let mut account = Account { name: name.into() };
+        let data_path = TempDir::new("test_account").unwrap();
+        let mut account = Account {
+            name: name.into(),
+            data_dir: data_path,
+        };
         account.set_remaining(remaining);
         account
     }
 
     pub fn remaining(&self) -> u64 {
-        let mut f = File::open(&self.name).unwrap();
+        let data_file = self.data_dir.path().join(&self.name);
+        let mut f = File::open(data_file).unwrap();
         let mut s = [0; 8];
         f.read_exact(&mut s).unwrap();
         u64::from_be_bytes(s)
     }
 
     pub fn set_remaining(&mut self, remaining: u64) {
-        let mut f = File::create(&self.name).unwrap();
+        let data_file = self.data_dir.path().join(&self.name);
+        let mut f = File::create(&data_file).unwrap();
         f.write_all(&u64::to_be_bytes(remaining)).unwrap();
     }
 }
@@ -42,9 +50,9 @@ pub fn transfer(from: &Mutex<Account>, to: &Mutex<Account>, amount: u64) -> bool
 #[cfg(test)]
 mod tests {
     use super::*;
+    // use fail;
     use std::sync::{Arc, Mutex};
     use std::thread;
-    // use fail;
 
     #[test]
     fn test_transfer() {

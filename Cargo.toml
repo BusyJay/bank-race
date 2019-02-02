@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 fail = "0.2"
+tempdir = "0.3"
